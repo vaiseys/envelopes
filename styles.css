@@ -156,6 +156,7 @@ input:focus, select:focus { outline: 2px solid var(--brand); outline-offset: -1p
 .btn-row .btn { flex: 1; padding: 10px 6px; }
 
 .env-hero { text-align: center; padding: 8px 0 4px; }
+.pace { margin-top: 2px; }
 .big { font-size: 40px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }

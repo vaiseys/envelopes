@@ -483,13 +483,23 @@ function envSheet(id) {
   const sub = e.group === 'monthly' ? `of ${fmt(e.amount)} monthly budget`
     : e.group === 'goal' ? `of ${fmt(e.amount)} goal` : 'Not yet assigned to an envelope';
   return `${sheetHead(esc(e.name))}
-    <div class="env-hero"><div class="big${bal < 0 ? ' neg' : ''}">${fmt(bal)}</div><div class="muted">${sub}</div></div>
+    <div class="env-hero"><div class="big${bal < 0 ? ' neg' : ''}">${fmt(bal)}</div><div class="muted">${sub}</div>${paceLine(e, bal)}</div>
     <div class="btn-row">
       <button class="btn" data-action="new-txn" data-kind="expense" data-env="${id}">Spend</button>
       <button class="btn" data-action="new-txn" data-kind="transfer" data-env="${id}">Move money</button>
       ${id === AVAILABLE ? '<button class="btn" data-action="fill">Fill</button>' : `<button class="btn" data-action="edit-env" data-id="${id}">Edit</button>`}
     </div>
     <div class="list">${txns.map((t) => txnRow(t, { envId: id, showDate: true })).join('') || '<div class="empty">No activity yet</div>'}</div>`;
+}
+
+// For monthly envelopes: compare the balance to what "should" be left today (the tick on the bar).
+function paceLine(e, bal) {
+  if (e.group !== 'monthly' || e.amount <= 0) return '';
+  const diff = bal - Math.round(e.amount * monthRemaining());
+  if (Math.abs(diff) < 100) return '<div class="pace">Right on pace.</div>';
+  return diff > 0
+    ? `<div class="pace pos">Great! You are ahead by $${fmt(diff)}.</div>`
+    : `<div class="pace neg">You are behind by $${fmt(-diff)}.</div>`;
 }
 
 function envEditSheet(id) {
