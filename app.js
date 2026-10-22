@@ -50,10 +50,12 @@ function fmtDate(iso) {
 }
 const fmtShortDate = (iso) => parseDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-function monthProgress() {
+// Share of a monthly budget that "should" be left today: starts at 1, drops by 1/N each day
+// (N = days in the month) and reaches 0 on the last day. Shown as the tick on monthly bars.
+function monthRemaining() {
   const now = new Date();
   const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  return (now.getDate() - 1 + now.getHours() / 24) / days;
+  return 1 - now.getDate() / days;
 }
 
 // ---------- Transaction builders ----------
@@ -307,7 +309,7 @@ function render() {
 
 function envelopesView(b) {
   const total = Object.values(b.env).reduce((s, v) => s + v, 0);
-  const tick = monthProgress() * 100;
+  const tick = monthRemaining() * 100;
   const groups = GROUPS.map((g) => {
     const envs = activeEnvelopes().filter((e) => e.group === g.id);
     if (!envs.length) return '';
