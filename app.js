@@ -78,14 +78,17 @@ const stamp = (t) => ({ id: uid(), ...t, createdAt: nowISO(), updatedAt: nowISO(
 function seed() {
   const env = (name, group, amount) => ({ id: uid(), name, group, amount, updatedAt: nowISO() });
   const envelopes = [
-    env('Discretionary', 'monthly', 80000),
-    env('Health', 'monthly', 30000),
-    env('Auto', 'monthly', 20000),
-    env('Reserve', 'monthly', 100000),
-    env('Reimbursement', 'goal', 0),
-    env('Music', 'goal', 250000),
-    env('Kid Event', 'goal', 250000),
-    env('Vacation', 'goal', 250000),
+    env('Rent', 'monthly', 150000),
+    env('Groceries', 'monthly', 60000),
+    env('Utilities', 'monthly', 25000),
+    env('Gas', 'monthly', 15000),
+    env('Dining Out', 'monthly', 20000),
+    env('Household', 'monthly', 10000),
+    env('Fun Money', 'monthly', 10000),
+    env('Emergency Fund', 'goal', 500000),
+    env('Vacation', 'goal', 200000),
+    env('Car Repairs', 'goal', 100000),
+    env('Holiday Gifts', 'goal', 80000),
     { id: AVAILABLE, name: '[Available]', group: 'available', amount: 0, updatedAt: nowISO() },
   ];
   const E = Object.fromEntries(envelopes.map((e) => [e.name, e.id]));
@@ -97,18 +100,22 @@ function seed() {
   const monthly = envelopes.filter((e) => e.group === 'monthly').map((e) => [e.id, e.amount]);
 
   const sample = [
-    [2, "Trader Joe's", 'Discretionary', 8743, cc],
-    [3, 'Shell', 'Auto', 4520, cc],
-    [5, 'CVS Pharmacy', 'Health', 2318, cc],
-    [6, 'Netflix', 'Discretionary', 1549, cc],
-    [8, 'Chipotle', 'Discretionary', 2387, cc],
-    [10, 'Dr. Patel copay', 'Health', 4000, chk],
-    [12, 'Target', 'Discretionary', 6412, cc],
-    [14, 'Car wash', 'Auto', 1500, cc],
-    [15, 'Costco', 'Discretionary', 14328, cc],
-    [16, 'Guitar strings', 'Music', 2499, cc],
-    [19, 'Dinner out', 'Discretionary', 7856, cc],
-    [21, 'Oil change', 'Auto', 6995, chk],
+    [1, 'Rent', 'Rent', 150000, chk],
+    [2, 'Grocery store', 'Groceries', 8743, cc],
+    [3, 'Gas station', 'Gas', 4520, cc],
+    [4, 'Electric bill', 'Utilities', 9812, chk],
+    [6, 'Streaming service', 'Fun Money', 1549, cc],
+    [7, 'Burrito place', 'Dining Out', 2387, cc],
+    [9, 'Hardware store', 'Household', 4612, cc],
+    [10, 'Grocery store', 'Groceries', 11328, cc],
+    [12, 'Internet', 'Utilities', 6999, chk],
+    [14, 'Movie tickets', 'Fun Money', 3200, cc],
+    [16, 'Warehouse club', 'Groceries', 15476, cc],
+    [17, 'Gas station', 'Gas', 4210, cc],
+    [19, 'Pizza night', 'Dining Out', 3856, cc],
+    [21, 'Oil change', 'Car Repairs', 6995, chk],
+    [23, 'Grocery store', 'Groceries', 9204, cc],
+    [26, 'Water bill', 'Utilities', 4530, chk],
   ];
 
   const now = new Date();
@@ -119,7 +126,7 @@ function seed() {
     txns.push(stamp(T.income({ date: isoDate(new Date(y, m, 1)), payee, account: chk, amount: total })));
     txns.push(stamp(T.fill({ date: isoDate(new Date(y, m, 1)), allocations })));
   };
-  addFunded('Starting balance', [[E['Kid Event'], 250000], [E.Vacation, 120000], [E.Music, 40000]]);
+  addFunded('Starting balance', [[E['Emergency Fund'], 320000], [E.Vacation, 85000], [E['Car Repairs'], 40000], [E['Holiday Gifts'], 30000]]);
   addFunded('Paycheck', monthly);
   sample.forEach(([day, payee, envName, amount, account]) => {
     const d = new Date(y, m, day);
