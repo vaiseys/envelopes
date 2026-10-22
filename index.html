@@ -9,8 +9,11 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script>
-    // Apply the saved Appearance choice before the page draws, to avoid a flash of the wrong theme.
-    try { const t = localStorage.getItem('envelopes-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+    // Apply saved Appearance choices before the page draws, to avoid a flash of the wrong look.
+    try {
+      const t = localStorage.getItem('envelopes-theme'); if (t) document.documentElement.dataset.theme = t;
+      const d = localStorage.getItem('envelopes-density'); if (d) document.documentElement.dataset.density = d;
+    } catch {}
   </script>
   <link rel="stylesheet" href="styles.css">
 </head>

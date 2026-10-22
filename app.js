@@ -557,34 +557,48 @@ function menuSheet() {
     <button class="menu-item" data-action="new-env">New envelope</button>
     <button class="menu-item" data-action="new-account">New account</button>
     <button class="menu-item" data-action="sync-settings">Google Sheets sync</button>
-    <button class="menu-item" data-action="appearance">Appearance: ${THEMES[currentTheme()]}</button>
+    <button class="menu-item" data-action="appearance">Appearance: ${prefLabel('theme')}, ${prefLabel('density')}</button>
     <button class="menu-item" data-action="export">Export transactions (CSV)</button>
     <button class="menu-item" data-action="reset-empty">Start fresh (erase everything)</button>
     ${syncCfg.url ? '' : '<button class="menu-item" data-action="reset-demo">Reload demo data</button>'}`;
 }
 
-// Appearance is a per-device preference, so it's stored on its own and never synced.
-const THEME_KEY = 'envelopes-theme';
-const THEMES = { auto: 'Automatic', light: 'Light', dark: 'Dark' };
-function currentTheme() {
-  try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch { return 'auto'; }
+// Appearance settings are per-device preferences, stored on their own and never synced.
+// Each one is applied as a data attribute on <html> (see the inline script in index.html).
+const PREFS = {
+  theme: {
+    label: 'Theme', key: 'envelopes-theme', default: 'auto',
+    options: { auto: ['Automatic', 'Match your phone’s setting'], light: ['Light', 'Always light'], dark: ['Dark', 'Always dark'] },
+  },
+  density: {
+    label: 'Spacing', key: 'envelopes-density', default: 'roomy',
+    options: { roomy: ['Roomy', 'The most breathing room'], cozy: ['Cozy', 'A little tighter'], compact: ['Compact', 'Fit the most on screen'] },
+  },
+};
+function getPref(name) {
+  const p = PREFS[name];
+  try { return localStorage.getItem(p.key) || p.default; } catch { return p.default; }
 }
-function setTheme(theme) {
+function setPref(name, value) {
+  const p = PREFS[name];
   try {
-    if (theme === 'auto') localStorage.removeItem(THEME_KEY);
-    else localStorage.setItem(THEME_KEY, theme);
+    if (value === p.default) localStorage.removeItem(p.key);
+    else localStorage.setItem(p.key, value);
   } catch {}
-  if (theme === 'auto') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = theme;
+  if (value === p.default) delete document.documentElement.dataset[name];
+  else document.documentElement.dataset[name] = value;
 }
+const prefLabel = (name) => PREFS[name].options[getPref(name)][0];
 function appearanceSheet() {
-  const cur = currentTheme();
-  const hint = { auto: 'Match your phone’s setting', light: 'Always light', dark: 'Always dark' };
   return `${sheetHead('Appearance')}
-    ${Object.entries(THEMES).map(([id, label]) =>
-      `<button class="menu-item choice${id === cur ? ' on' : ''}" data-action="set-theme" data-theme="${id}">
-        <span>${label}<span class="muted small"> · ${hint[id]}</span></span><span class="check">${id === cur ? '✓' : ''}</span>
-      </button>`).join('')}`;
+    ${Object.entries(PREFS).map(([name, p]) => {
+      const cur = getPref(name);
+      return `<div class="pref-head">${p.label}</div>
+        ${Object.entries(p.options).map(([id, [label, hint]]) =>
+          `<button class="menu-item choice" data-action="set-pref" data-pref="${name}" data-value="${id}">
+            <span>${label}<span class="muted small"> · ${hint}</span></span><span class="check">${id === cur ? '✓' : ''}</span>
+          </button>`).join('')}`;
+    }).join('')}`;
 }
 
 function syncSheet() {
@@ -842,7 +856,7 @@ document.addEventListener('click', (ev) => {
       break;
     case 'sync-settings': openSheet(syncSheet()); break;
     case 'appearance': openSheet(appearanceSheet()); break;
-    case 'set-theme': setTheme(el.dataset.theme); closeSheet(); break;
+    case 'set-pref': setPref(el.dataset.pref, el.dataset.value); openSheet(appearanceSheet()); break;
     case 'sync-now': closeSheet(); syncNow({ manual: true }); break;
     case 'sync-disconnect':
       if (confirm('Stop syncing this device? Your data stays here and in the sheet.')) {
