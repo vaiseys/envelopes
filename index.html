@@ -8,6 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <script>
+    // Apply the saved Appearance choice before the page draws, to avoid a flash of the wrong theme.
+    try { const t = localStorage.getItem('envelopes-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>

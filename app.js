@@ -557,9 +557,34 @@ function menuSheet() {
     <button class="menu-item" data-action="new-env">New envelope</button>
     <button class="menu-item" data-action="new-account">New account</button>
     <button class="menu-item" data-action="sync-settings">Google Sheets sync</button>
+    <button class="menu-item" data-action="appearance">Appearance: ${THEMES[currentTheme()]}</button>
     <button class="menu-item" data-action="export">Export transactions (CSV)</button>
     <button class="menu-item" data-action="reset-empty">Start fresh (erase everything)</button>
     ${syncCfg.url ? '' : '<button class="menu-item" data-action="reset-demo">Reload demo data</button>'}`;
+}
+
+// Appearance is a per-device preference, so it's stored on its own and never synced.
+const THEME_KEY = 'envelopes-theme';
+const THEMES = { auto: 'Automatic', light: 'Light', dark: 'Dark' };
+function currentTheme() {
+  try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch { return 'auto'; }
+}
+function setTheme(theme) {
+  try {
+    if (theme === 'auto') localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, theme);
+  } catch {}
+  if (theme === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
+}
+function appearanceSheet() {
+  const cur = currentTheme();
+  const hint = { auto: 'Match your phone’s setting', light: 'Always light', dark: 'Always dark' };
+  return `${sheetHead('Appearance')}
+    ${Object.entries(THEMES).map(([id, label]) =>
+      `<button class="menu-item choice${id === cur ? ' on' : ''}" data-action="set-theme" data-theme="${id}">
+        <span>${label}<span class="muted small"> · ${hint[id]}</span></span><span class="check">${id === cur ? '✓' : ''}</span>
+      </button>`).join('')}`;
 }
 
 function syncSheet() {
@@ -816,6 +841,8 @@ document.addEventListener('click', (ev) => {
       }
       break;
     case 'sync-settings': openSheet(syncSheet()); break;
+    case 'appearance': openSheet(appearanceSheet()); break;
+    case 'set-theme': setTheme(el.dataset.theme); closeSheet(); break;
     case 'sync-now': closeSheet(); syncNow({ manual: true }); break;
     case 'sync-disconnect':
       if (confirm('Stop syncing this device? Your data stays here and in the sheet.')) {
