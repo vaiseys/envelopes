@@ -74,6 +74,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .neg-banner { margin: 8px 0; background: rgba(214, 69, 69, .12); color: var(--neg); }
 .steps { padding-left: 22px; margin: 8px 0; font-size: 15px; }
 .steps li { margin: 6px 0; }
+.steps a { color: var(--accent); }
 .input-row { display: flex; gap: 8px; }
 .input-row input { flex: 1; font-family: ui-monospace, Menlo, monospace; font-size: 15px; }
 .statusline { display: flex; justify-content: space-between; padding: 14px 16px 4px; color: var(--muted); font-size: 15px; }

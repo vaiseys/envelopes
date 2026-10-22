@@ -591,7 +591,7 @@ function syncSheet() {
   const c = syncCfg;
   const steps = `<ol class="steps">
       <li>Make a new Google Sheet for your budget.</li>
-      <li>In the sheet, open <b>Extensions → Apps Script</b> and paste in <b>Code.gs</b>.</li>
+      <li>In the sheet, open <b>Extensions → Apps Script</b> and paste in <a href="https://github.com/vaiseys/envelopes/blob/main/sheets-sync/Code.gs" target="_blank" rel="noopener"><b>Code.gs</b></a>. The full guide is in the <a href="https://github.com/vaiseys/envelopes#set-up-google-sheets-sync" target="_blank" rel="noopener">README</a>.</li>
       <li>Copy the sync key below into the <b>SECRET_KEY</b> line at the top of the script.</li>
       <li><b>Deploy → New deployment → Web app</b>. Execute as <b>Me</b>, access <b>Anyone</b>.</li>
       <li>Paste the web app URL below and tap Connect.</li>
