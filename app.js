@@ -21,6 +21,7 @@ const ICONS = {
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
+  bolt: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>',
 };
 
 // ---------- Utilities ----------
@@ -135,7 +136,8 @@ function seed() {
     if (d <= now) txns.push(stamp(T.expense({ date: isoDate(d), payee, env: E[envName], account, amount })));
   });
 
-  return { version: 1, envelopes, accounts, txns, settings: { lastAccount: cc }, demo: true };
+  const quick = [{ payee: 'Coffee', amount: 450, env: E['Dining Out'], account: cc }];
+  return { version: 1, envelopes, accounts, txns, settings: { lastAccount: cc, quick }, demo: true };
 }
 
 // ---------- State ----------
@@ -304,6 +306,7 @@ function render() {
       </nav>
     </header>
     <main>${view}</main>
+    ${quickButton()}
     <button class="fab" data-action="new-txn" aria-label="Add transaction">${ICONS.plus}</button>`;
 }
 
@@ -492,6 +495,68 @@ function envSheet(id) {
     <div class="list">${txns.map((t) => txnRow(t, { envId: id, showDate: true })).join('') || '<div class="empty">No activity yet</div>'}</div>`;
 }
 
+// ---------- Quick transaction button ----------
+// A one-tap expense for something done often (a coffee, a subway ride). Kept as a list in
+// state.settings.quick so it can grow into a dropdown later; only the first is used for now.
+// Settings aren't synced, so each device sets up its own.
+const quickPreset = () => (state.settings.quick || [])[0];
+
+function quickButton() {
+  const q = quickPreset();
+  if (!q) return `<button class="quick setup" data-action="quick-setup">${ICONS.bolt}<span class="quick-label">Add a quick button</span></button>`;
+  return `<button class="quick" data-action="quick-add" aria-label="Add ${esc(q.payee)} ${fmt(q.amount)}">
+    ${ICONS.bolt}<span class="quick-label">${esc(q.payee)}</span><span class="quick-amt">${fmt(q.amount)}</span>
+  </button>`;
+}
+
+function quickAdd() {
+  const q = quickPreset();
+  const env = q && envById(q.env), acct = q && acctById(q.account);
+  if (!env || env.archived || !acct || acct.archived) {
+    toast('Pick an envelope and account for the quick button');
+    return openSheet(quickSheet());
+  }
+  const t = stamp(T.expense({ date: todayISO(), payee: q.payee, env: q.env, account: q.account, amount: q.amount }));
+  state.txns.push(t);
+  commit();
+  navigator.vibrate?.(15);
+  toast(`Added ${q.payee} ${fmt(q.amount)} from ${env.name}`, 'Undo', () => {
+    t.deleted = true;
+    t.updatedAt = nowISO();
+    commit();
+  });
+}
+
+function quickSheet() {
+  const q = quickPreset();
+  const firstEnv = activeEnvelopes().find((e) => e.group !== 'available')?.id;
+  return `<form data-form="quick" autocomplete="off">
+    ${sheetHead('Quick transaction button')}
+    <p class="muted small">Tapping the ⚡ button at the bottom of the screen adds this expense, dated today. You can undo it from the message that pops up.</p>
+    <label><span>Payee</span><input name="payee" value="${esc(q?.payee)}" placeholder="e.g. Coffee"></label>
+    <label><span>Amount</span><input name="amount" inputmode="decimal" placeholder="0.00" value="${toInput(q?.amount)}"></label>
+    <label><span>Envelope</span><select name="env">${envOptions(q?.env || firstEnv)}</select></label>
+    <label><span>Account</span><select name="account">${acctOptions(q?.account || state.settings.lastAccount)}</select></label>
+    <div class="sheet-actions">
+      ${q ? '<button type="button" class="btn danger" data-action="quick-remove">Remove button</button>' : ''}
+      <button class="btn primary">Save</button>
+    </div>
+  </form>`;
+}
+
+function saveQuickForm(form) {
+  const f = Object.fromEntries(new FormData(form));
+  const payee = f.payee.trim();
+  const amount = toCents(f.amount);
+  if (!payee) return toast('Give the quick button a payee');
+  if (amount <= 0) return toast('Enter an amount greater than 0');
+  state.settings.quick = [{ payee, amount, env: f.env, account: f.account }];
+  save();
+  render();
+  closeSheet();
+  toast('Quick button saved');
+}
+
 // For monthly envelopes: compare the balance to what "should" be left today (the tick on the bar).
 function paceLine(e, bal) {
   if (e.group !== 'monthly' || e.amount <= 0) return '';
@@ -575,6 +640,7 @@ function menuSheet() {
     <button class="menu-item" data-action="fill">Fill envelopes</button>
     <button class="menu-item" data-action="new-env">New envelope</button>
     <button class="menu-item" data-action="new-account">New account</button>
+    <button class="menu-item" data-action="quick-setup">Quick transaction button</button>
     <button class="menu-item" data-action="sync-settings">Google Sheets sync</button>
     <button class="menu-item" data-action="appearance">Appearance: ${prefLabel('theme')}, ${prefLabel('density')}</button>
     <button class="menu-item" data-action="export">Export transactions (CSV)</button>
@@ -858,6 +924,12 @@ document.addEventListener('click', (ev) => {
     case 'open-account': openSheet(accountSheet(id)); break;
     case 'new-account': openSheet(accountSheet(), 'input[name="name"]'); break;
     case 'fill': openSheet(fillSheet()); break;
+    case 'quick-add': quickAdd(); break;
+    case 'quick-setup': openSheet(quickSheet()); break;
+    case 'quick-remove':
+      state.settings.quick = [];
+      save(); render(); closeSheet(); toast('Quick button removed');
+      break;
     case 'fill-budgets':
     case 'fill-clear': {
       const form = el.closest('form');
@@ -896,7 +968,7 @@ document.addEventListener('click', (ev) => {
 document.addEventListener('submit', (ev) => {
   ev.preventDefault();
   const form = ev.target;
-  ({ txn: saveTxnForm, env: saveEnvForm, account: saveAccountForm, fill: saveFillForm, sync: saveSyncForm })[form.dataset.form]?.(form);
+  ({ txn: saveTxnForm, env: saveEnvForm, account: saveAccountForm, fill: saveFillForm, sync: saveSyncForm, quick: saveQuickForm })[form.dataset.form]?.(form);
 });
 
 document.addEventListener('input', (ev) => {

@@ -125,6 +125,14 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .fab svg { width: 30px; height: 30px; }
 .fab-spacer { height: 110px; }
 
+/* Quick transaction pill, bottom-left, vertically centred with the + button */
+.quick { position: fixed; left: max(16px, calc(50% - 304px)); bottom: calc(30px + env(safe-area-inset-bottom)); height: 48px; max-width: calc(100% - 116px); padding: 0 18px 0 14px; display: flex; align-items: center; gap: 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 3px 10px rgba(0,0,0,.18); font-weight: 600; z-index: 4; }
+.quick svg { width: 18px; height: 18px; flex: none; color: var(--accent); }
+.quick-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quick-amt { color: var(--muted); font-variant-numeric: tabular-nums; }
+.quick.setup { color: var(--muted); font-weight: 500; }
+.quick:active { transform: scale(.97); }
+
 /* Bottom sheet */
 #sheet-root { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
 #sheet-root.open { pointer-events: auto; }
