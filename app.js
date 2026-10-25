@@ -432,6 +432,16 @@ function acctOptions(selected) {
   return activeAccounts().map((a) => `<option value="${a.id}"${a.id === selected ? ' selected' : ''}>${esc(a.name)}</option>`).join('');
 }
 
+// The Account picker, or, when the Accounts tab is hidden and there's only one account,
+// an invisible field that always uses that account.
+function accountField(selected, attrs = '') {
+  const accts = activeAccounts();
+  if (getPref('accountsTab') === 'hide' && accts.length === 1) {
+    return `<input type="hidden" name="account" value="${accts[0].id}">`;
+  }
+  return `<label ${attrs}><span>Account</span><select name="account">${acctOptions(selected)}</select></label>`;
+}
+
 function txnSheet({ kind = 'expense', txn = null, env = null } = {}) {
   const t = txn;
   const k = t?.kind || kind;
@@ -453,7 +463,7 @@ function txnSheet({ kind = 'expense', txn = null, env = null } = {}) {
     <label data-show="income"><span>Into envelope</span><select name="incomeEnv">${envOptions(incEnv)}</select></label>
     <label data-show="transfer"><span>From envelope</span><select name="from">${envOptions(from)}</select></label>
     <label data-show="transfer"><span>To envelope</span><select name="to">${envOptions(to)}</select></label>
-    <label data-show="expense income"><span>Account</span><select name="account">${acctOptions(account)}</select></label>
+    ${accountField(account, 'data-show="expense income"')}
     <div class="two-col">
       <label><span>Date</span><input type="date" name="date" value="${t?.date || todayISO()}"></label>
       <label><span>Note</span><input name="note" value="${esc(t?.note)}"></label>
@@ -540,7 +550,7 @@ function quickSheet() {
     <label><span>Payee</span><input name="payee" value="${esc(q?.payee)}" placeholder="e.g. Coffee"></label>
     <label><span>Amount</span><input name="amount" inputmode="decimal" placeholder="0.00" value="${toInput(q?.amount)}"></label>
     <label><span>Envelope</span><select name="env">${envOptions(q?.env || firstEnv)}</select></label>
-    <label><span>Account</span><select name="account">${acctOptions(q?.account || state.settings.lastAccount)}</select></label>
+    ${accountField(q?.account || state.settings.lastAccount)}
     <div class="sheet-actions">
       ${q ? '<button type="button" class="btn danger" data-action="quick-remove">Remove button</button>' : ''}
       <button class="btn primary">Save</button>
