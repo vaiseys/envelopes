@@ -384,11 +384,13 @@ function accountsView(b) {
 
 function txnSummary(t) {
   const note = t.note ? ` · ${t.note}` : '';
+  // Account names are left out when the Accounts tab is hidden.
+  const acct = getPref('accountsTab') === 'show' && t.account ? ` · ${acctName(t.account)}` : '';
   switch (t.kind) {
     case 'expense':
-      return { title: t.payee || 'Expense', sub: `${envName(t.lines[0].env)} · ${acctName(t.account)}${note}`, amt: t.accountAmt };
+      return { title: t.payee || 'Expense', sub: `${envName(t.lines[0].env)}${acct}${note}`, amt: t.accountAmt };
     case 'income':
-      return { title: t.payee || 'Income', sub: `→ ${envName(t.lines[0].env)} · ${acctName(t.account)}${note}`, amt: t.accountAmt };
+      return { title: t.payee || 'Income', sub: `→ ${envName(t.lines[0].env)}${acct}${note}`, amt: t.accountAmt };
     case 'transfer':
       return { title: 'Move money', sub: `${envName(t.lines[0].env)} → ${envName(t.lines[1].env)}${note}`, amt: t.lines[1].amt, neutral: true };
     case 'fill':
