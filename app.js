@@ -293,7 +293,9 @@ function syncLabel() {
 // ---------- Main views ----------
 function render() {
   const b = computeBalances();
-  const tabs = [['envelopes', 'Envelopes'], ['transactions', 'Transactions'], ['accounts', 'Accounts']];
+  const tabs = [['envelopes', 'Envelopes'], ['transactions', 'Transactions'], ['accounts', 'Accounts']]
+    .filter(([id]) => id !== 'accounts' || getPref('accountsTab') === 'show');
+  if (!tabs.some(([id]) => id === ui.tab)) ui.tab = 'envelopes';
   const view = { envelopes: envelopesView, transactions: transactionsView, accounts: accountsView }[ui.tab](b);
   $('#app').innerHTML = `
     <header class="appbar">
@@ -643,21 +645,27 @@ function menuSheet() {
     <button class="menu-item" data-action="quick-setup">Quick transaction button</button>
     <button class="menu-item" data-action="sync-settings">Google Sheets sync</button>
     <button class="menu-item" data-action="appearance">Appearance: ${prefLabel('theme')}, ${prefLabel('density')}</button>
+    <button class="menu-item" data-action="toggle-accounts-tab">${getPref('accountsTab') === 'show' ? 'Hide' : 'Show'} Accounts tab</button>
     <button class="menu-item" data-action="export">Export transactions (CSV)</button>
     <button class="menu-item" data-action="reset-empty">Start fresh (erase everything)</button>
     ${syncCfg.url ? '' : '<button class="menu-item" data-action="reset-demo">Reload demo data</button>'}`;
 }
 
-// Appearance settings are per-device preferences, stored on their own and never synced.
+// Per-device preferences, stored on their own and never synced.
 // Each one is applied as a data attribute on <html> (see the inline script in index.html).
+// Those marked `appearance` are listed on the Appearance screen; the rest have their own menu item.
 const PREFS = {
   theme: {
-    label: 'Theme', key: 'envelopes-theme', default: 'auto',
+    label: 'Theme', key: 'envelopes-theme', default: 'auto', appearance: true,
     options: { auto: ['Automatic', 'Match your phone’s setting'], light: ['Light', 'Always light'], dark: ['Dark', 'Always dark'] },
   },
   density: {
-    label: 'Spacing', key: 'envelopes-density', default: 'roomy',
+    label: 'Spacing', key: 'envelopes-density', default: 'roomy', appearance: true,
     options: { roomy: ['Roomy', 'The most breathing room'], cozy: ['Cozy', 'A little tighter'], compact: ['Compact', 'Fit the most on screen'] },
+  },
+  accountsTab: {
+    label: 'Accounts tab', key: 'envelopes-accounts-tab', default: 'show',
+    options: { show: ['Show'], hide: ['Hide'] },
   },
 };
 function getPref(name) {
@@ -676,7 +684,7 @@ function setPref(name, value) {
 const prefLabel = (name) => PREFS[name].options[getPref(name)][0];
 function appearanceSheet() {
   return `${sheetHead('Appearance')}
-    ${Object.entries(PREFS).map(([name, p]) => {
+    ${Object.entries(PREFS).filter(([, p]) => p.appearance).map(([name, p]) => {
       const cur = getPref(name);
       return `<div class="pref-head">${p.label}</div>
         ${Object.entries(p.options).map(([id, [label, hint]]) =>
@@ -947,6 +955,13 @@ document.addEventListener('click', (ev) => {
       break;
     case 'sync-settings': openSheet(syncSheet()); break;
     case 'appearance': openSheet(appearanceSheet()); break;
+    case 'toggle-accounts-tab': {
+      const show = getPref('accountsTab') !== 'show';
+      setPref('accountsTab', show ? 'show' : 'hide');
+      render(); closeSheet();
+      toast(show ? 'Accounts tab shown' : 'Accounts tab hidden. Show it again from the ⋮ menu.');
+      break;
+    }
     case 'set-pref': setPref(el.dataset.pref, el.dataset.value); openSheet(appearanceSheet()); break;
     case 'sync-now': closeSheet(); syncNow({ manual: true }); break;
     case 'sync-disconnect':
