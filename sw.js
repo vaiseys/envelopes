@@ -1,7 +1,7 @@
 // Network-first service worker: always tries for the latest version,
 // falls back to the cached copy when offline.
-const CACHE = 'envelopes-v2';
-const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
+const CACHE = 'envelopes-v3';
+const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'icon.svg', 'icon-v2-192.png', 'icon-v2-512.png', 'icon-v2-maskable-512.png', 'apple-touch-icon-v2.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
