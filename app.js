@@ -612,38 +612,80 @@ function accountSheet(id) {
   ${a ? `<div class="list">${txns.map((t) => txnRow(t, { showDate: true })).join('') || '<div class="empty">No activity yet</div>'}</div>` : ''}`;
 }
 
+// How much a monthly envelope receives when filled:
+//   add:   its full budget on top of what it has, so any surplus stays put
+//   topup: whatever brings it to exactly its budget; negative if it's over, which returns the surplus to [Available]
+const fillAmount = (mode, budget, balance) => (mode === 'topup' ? budget - balance : budget);
+
 function fillSheet() {
   const b = computeBalances();
+  const modes = state.settings.fillModes || {};
   const rows = activeEnvelopes().filter((e) => e.group !== 'available').map((e) => {
     const bal = b.env[e.id] || 0;
-    const preset = e.group === 'monthly' ? e.amount : 0;
-    return `<div class="fill-row">
-      <div><div class="fill-name">${esc(e.name)}</div><div class="muted small">has ${fmt(bal)} · ${e.group === 'monthly' ? 'budget' : 'goal'} ${fmt(e.amount)}</div></div>
-      <input name="${e.id}" inputmode="decimal" placeholder="0.00" value="${toInput(preset)}" data-fill data-budget="${e.group === 'monthly' ? e.amount : 0}">
+    const budgeted = e.group === 'monthly' && e.amount > 0;
+    const mode = modes[e.id] === 'topup' ? 'topup' : 'add';
+    const preset = budgeted ? fillAmount(mode, e.amount, bal) : 0;
+    const toggle = !budgeted ? '' : `<div class="mini-seg">
+        <button type="button" class="${mode === 'topup' ? 'on' : ''}" data-action="fill-mode" data-mode="topup">Top up</button>
+        <button type="button" class="${mode === 'add' ? 'on' : ''}" data-action="fill-mode" data-mode="add">Add</button>
+      </div>`;
+    return `<div class="fill-row"${budgeted ? ` data-mode="${mode}" data-budget="${e.amount}" data-balance="${bal}"` : ''}>
+      <div><div class="fill-name">${esc(e.name)}</div><div class="muted small">has ${fmt(bal)} · ${e.group === 'monthly' ? 'budget' : 'goal'} ${fmt(e.amount)}</div>${toggle}</div>
+      <input name="${e.id}" inputmode="decimal" placeholder="0.00" value="${toInput(preset)}" data-fill>
     </div>`;
+  }).join('');
+  const sweepOptions = GROUPS.filter((g) => g.id !== 'available').map((g) => {
+    const envs = activeEnvelopes().filter((e) => e.group === g.id);
+    if (!envs.length) return '';
+    return `<optgroup label="${g.label}">${envs.map((e) =>
+      `<option value="${e.id}"${e.id === state.settings.fillSweep ? ' selected' : ''}>${esc(e.name)}</option>`).join('')}</optgroup>`;
   }).join('');
   return `<form data-form="fill" autocomplete="off">
     ${sheetHead('Fill envelopes')}
     <div class="fill-summary">
       <span>Available</span><span>${fmt(b.env[AVAILABLE] || 0)}</span>
       <span>Filling</span><span data-out="filling"></span>
+      <span data-swept>Swept</span><span data-swept data-out="swept"></span>
       <strong>Left over</strong><strong data-out="left"></strong>
     </div>
     <div class="btn-row">
-      <button type="button" class="btn" data-action="fill-budgets">Use monthly budgets</button>
+      <button type="button" class="btn" data-action="fill-all" data-mode="topup">Top up all</button>
+      <button type="button" class="btn" data-action="fill-all" data-mode="add">Add all</button>
       <button type="button" class="btn" data-action="fill-clear">Clear all</button>
     </div>
     ${rows}
+    <label><span>Sweep what’s left (<span data-out="sweepable"></span>) into</span><select name="sweep" data-sweep>
+      <option value="">Nowhere, keep it in [Available]</option>
+      ${sweepOptions}
+    </select></label>
     <label><span>Date</span><input type="date" name="date" value="${todayISO()}"></label>
     <div class="sheet-actions"><button class="btn primary">Fill envelopes</button></div>
   </form>`;
 }
 
+function setFillMode(row, mode) {
+  row.dataset.mode = mode;
+  row.querySelectorAll('.mini-seg button').forEach((btn) => btn.classList.toggle('on', btn.dataset.mode === mode));
+  row.querySelector('[data-fill]').value = toInput(fillAmount(mode, +row.dataset.budget, +row.dataset.balance));
+}
+
+// A typed amount is neither Top up nor Add, so neither stays highlighted.
+function clearFillMode(row) {
+  delete row.dataset.mode;
+  row.querySelectorAll('.mini-seg button').forEach((btn) => btn.classList.remove('on'));
+}
+
 function updateFillSummary(form) {
   const avail = computeBalances().env[AVAILABLE] || 0;
   const filling = [...form.querySelectorAll('[data-fill]')].reduce((s, i) => s + toCents(i.value), 0);
-  const left = avail - filling;
+  const unallocated = avail - filling;
+  const sweepable = Math.max(0, unallocated);
+  const swept = form.elements.sweep.value ? sweepable : 0;
+  const left = unallocated - swept;
   form.querySelector('[data-out="filling"]').textContent = fmt(filling);
+  form.querySelector('[data-out="sweepable"]').textContent = fmt(sweepable);
+  form.querySelector('[data-out="swept"]').textContent = fmt(swept);
+  form.querySelectorAll('[data-swept]').forEach((el) => (el.hidden = !swept));
   const out = form.querySelector('[data-out="left"]');
   out.textContent = fmt(left);
   out.classList.toggle('neg', left < 0);
@@ -880,14 +922,21 @@ function saveAccountForm(form) {
 }
 
 function saveFillForm(form) {
-  const allocations = [...form.querySelectorAll('[data-fill]')]
-    .map((i) => [i.name, toCents(i.value)])
-    .filter(([, amt]) => amt !== 0);
-  if (!allocations.length) return toast('Enter an amount for at least one envelope');
+  const amounts = new Map([...form.querySelectorAll('[data-fill]')].map((i) => [i.name, toCents(i.value)]));
   const avail = computeBalances().env[AVAILABLE] || 0;
-  const total = allocations.reduce((s, [, a]) => s + a, 0);
+  const total = [...amounts.values()].reduce((s, a) => s + a, 0);
+  const sweepTo = form.elements.sweep.value;
+  if (sweepTo && avail > total) amounts.set(sweepTo, amounts.get(sweepTo) + avail - total);
+  const allocations = [...amounts].filter(([, amt]) => amt !== 0);
+  if (!allocations.length) return toast('Enter an amount for at least one envelope');
   if (total > avail && !confirm(`That's ${fmt(total - avail)} more than you have available. Fill anyway?`)) return;
   state.txns.push(stamp(T.fill({ date: form.elements.date.value || todayISO(), allocations })));
+  // Remember these choices for next time. Settings aren't synced, so each device keeps its own.
+  const modes = state.settings.fillModes ||= {};
+  form.querySelectorAll('.fill-row[data-mode]').forEach((row) => {
+    modes[row.querySelector('[data-fill]').name] = row.dataset.mode;
+  });
+  state.settings.fillSweep = sweepTo;
   commit();
   closeSheet();
   toast(`Filled ${plural(allocations.length, 'envelope')}`);
@@ -950,11 +999,19 @@ document.addEventListener('click', (ev) => {
       state.settings.quick = [];
       save(); render(); closeSheet(); toast('Quick button removed');
       break;
-    case 'fill-budgets':
+    case 'fill-mode':
+      setFillMode(el.closest('.fill-row'), el.dataset.mode);
+      updateFillSummary(el.closest('form'));
+      break;
+    case 'fill-all':
+      el.closest('form').querySelectorAll('.fill-row[data-budget]').forEach((row) => setFillMode(row, el.dataset.mode));
+      updateFillSummary(el.closest('form'));
+      break;
     case 'fill-clear': {
       const form = el.closest('form');
-      form.querySelectorAll('[data-fill]').forEach((i) => {
-        i.value = action === 'fill-budgets' ? toInput(+i.dataset.budget) : '';
+      form.querySelectorAll('.fill-row').forEach((row) => {
+        clearFillMode(row);
+        row.querySelector('[data-fill]').value = '';
       });
       updateFillSummary(form);
       break;
@@ -999,10 +1056,14 @@ document.addEventListener('submit', (ev) => {
 });
 
 document.addEventListener('input', (ev) => {
-  if (ev.target.matches('[data-fill]')) updateFillSummary(ev.target.form);
+  if (ev.target.matches('[data-fill]')) {
+    clearFillMode(ev.target.closest('.fill-row'));
+    updateFillSummary(ev.target.form);
+  }
 });
 
 document.addEventListener('change', (ev) => {
+  if (ev.target.matches('[data-sweep]')) updateFillSummary(ev.target.form);
   if (ev.target.dataset.actionChange === 'env-group') {
     ev.target.form.querySelector('.amount-label').textContent = ev.target.value === 'goal' ? 'Goal target' : 'Monthly budget';
   }

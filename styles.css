@@ -174,6 +174,9 @@ input:focus, select:focus { outline: 2px solid var(--brand); outline-offset: -1p
 .fill-row { display: grid; grid-template-columns: 1fr 120px; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .fill-name { font-size: 17px; }
 .fill-row input { text-align: right; padding: 10px; }
+.mini-seg { display: inline-flex; gap: 2px; margin-top: 6px; padding: 2px; border-radius: 8px; background: var(--bg); }
+.mini-seg button { padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.mini-seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.2); }
 
 .pref-head { margin: 14px 0 0; font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .menu-item.choice { display: flex; justify-content: space-between; align-items: center; }

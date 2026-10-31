@@ -5,7 +5,7 @@ A simple envelope budgeting app: a personal replacement for [Goodbudget](https:/
 **Live app:** https://vaiseys.github.io/envelopes/
 
 - **Envelopes** are grouped as *Monthly* (refilled each month to a budget) or *Goal* (saving toward a target). Progress bars and a tick mark show how far through the month you are.
-- **Transactions:** expenses, income, and moving money between envelopes. **Fill envelopes** hands out your *[Available]* money each month.
+- **Transactions:** expenses, income, and moving money between envelopes. **Fill envelopes** hands out your *[Available]* money each month: each monthly envelope can *top up* to its budget (returning any surplus to *[Available]*) or *add* its budget on top (keeping the surplus), and whatever's left can be swept into one envelope.
 - **Accounts** (checking, cash, cards) track where the money is. Envelopes track what it's for, and the two totals always match.
 - **Works offline** and installs on Android like a regular app. There's no app store and no bank connection.
 - **Optional sync to a Google Sheet you own.** That backs up your budget, lets several devices share it, and gives you a spreadsheet to sort and chart.
